@@ -100,7 +100,6 @@ def run_strategy():
 
 if __name__ == "__main__":
     car = CarData("data/data.csv")
-
     run_strategy()
 
     """
