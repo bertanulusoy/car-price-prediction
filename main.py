@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 import click
+from hydra.utils import instantiate
 
 import wandb
 
@@ -13,8 +14,12 @@ from pandas import DataFrame, Series
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
-from car_price.missing_data_strategy import MissingDataStrategy
-from car_price.categorical_data_strategy import CategoricalDataStrategy
+from car_price.missing_data_strategy import MissingDataStrategy, \
+    AssigningNullDataStrategy, DropMissingDataStrategy, \
+    DataImputationSrategy, ExtensionDataImputationStrategy
+
+from car_price.categorical_data_strategy import CategoricalDataStrategy, \
+    DropCategoricalStrategy,  OrdinalEncodingStrategy, OneHotEncodingStrategy
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -95,7 +100,7 @@ class CarPricePredictor:
         data_frame: DataFrame = self.car_data.reading().feature_preprocessing()
         df_without_missing: DataFrame = self.miss_d_strategy.process_missing_data_strategy(data_frame)
         df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
-
+        print(df_vectorized_without_missing)
 
 """
 @click.command()
@@ -106,22 +111,36 @@ class CarPricePredictor:
 )
 @click.option("--dest_path", help="Location where the resulting files will be saved")
 @click.option("--iteration_count", default=5, help="Number of iterations in the sweep")
-
-wandb_project: str, wandb_entity: str, raw_data_path: str, iteration_count: int
 """
 
 
 @hydra.main(version_base="1.3.2", config_path="conf", config_name="config")
-def run_strategy(cfg: DictConfig):
-    print(OmegaConf.to_yaml(cfg, resolve=True))
+def main(cfg: DictConfig):
+    # print(OmegaConf.to_yaml(cfg, resolve=True))
     log.info("Info level message")
     log.debug("Debug level message")
-    # sweep_id = wandb.sweep()
+
+    # log.info(cfg.wandb)
+    car_data = CarData(cfg.wandb.raw_data_path)
+
+    missing_data_strategy = instantiate(cfg.missing_data_strategy)
+    categorical_data_strategy = instantiate(cfg.categorical_data_strategy)
+
+    CarPricePredictor(car_data,
+                      missing_data_strategy=missing_data_strategy,
+                      categorical_data_strategy=DropCategoricalStrategy())\
+        .run_strategy()
+    """
+    sweep_id = wandb.sweep(sweep=OmegaConf.to_object(cfg=cfg.sweep_config),
+                           project=cfg.wandb.project,
+                           entity=cfg.wandb.entity)
+    print(sweep_id)
+    """
+    # wandb.agent(sweep_id=sweep_id, partial())
 
 
 if __name__ == "__main__":
-    car = CarData("data/data.csv")
-    run_strategy()
+    main()
 
     """
     CarPricePredictor(car,
