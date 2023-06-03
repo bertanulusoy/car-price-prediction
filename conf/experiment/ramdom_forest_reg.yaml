@@ -1,0 +1,5 @@
+# @package _global_
+hydra:
+  sweeper:
+    params:
+      +compile.lr: 1e-2,1e-3,1e-4

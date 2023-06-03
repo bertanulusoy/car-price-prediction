@@ -1,0 +1,10 @@
+defaults:
+  - experiment: base
+
+
+wandb:
+  project: car_price_prediction
+  entity: bertan-ulusoy
+  raw_data_path: data/data.csv
+  dest_path: output
+  iteration_count: 5

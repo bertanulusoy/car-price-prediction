@@ -2,12 +2,22 @@ from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 import click
+
+import wandb
+
+import logging
+from omegaconf import DictConfig, OmegaConf
+import hydra
+
 from pandas import DataFrame, Series
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
 from car_price.missing_data_strategy import MissingDataStrategy
 from car_price.categorical_data_strategy import CategoricalDataStrategy
+
+# A logger for this file
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -20,7 +30,7 @@ class CarData:
     y_valid: Series = None
 
     def reading(self):
-        missing_values = ["n/a", "na", "--"] #  "transmission type has unknown fields"
+        missing_values = ["n/a", "na", "--"]  # "transmission type has unknown fields"
         self.data_frame = pd.read_csv(self.file_path, na_values=missing_values)
         return self
 
@@ -31,8 +41,8 @@ class CarData:
         :return: None
         """
         # making column names uniform
-        self.data_frame.columns = self.data_frame\
-            .columns.str.lower()\
+        self.data_frame.columns = self.data_frame \
+            .columns.str.lower() \
             .str.replace(' ', '_')
         # making column contents uniform
         string_columns = list(self.data_frame.dtypes[self.data_frame.dtypes == 'object'].index)
@@ -87,6 +97,7 @@ class CarPricePredictor:
         df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
 
 
+"""
 @click.command()
 @click.option("--wandb_project", help="Name of Weights & Biases project")
 @click.option("--wandb_entity", help="Name of Weights & Biases entity")
@@ -94,8 +105,18 @@ class CarPricePredictor:
     "--raw_data_path", help="Location where the raw Car Price Prediction data saved."
 )
 @click.option("--dest_path", help="Location where the resulting files will be saved")
-def run_strategy():
-    print()
+@click.option("--iteration_count", default=5, help="Number of iterations in the sweep")
+
+wandb_project: str, wandb_entity: str, raw_data_path: str, iteration_count: int
+"""
+
+
+@hydra.main(version_base="1.3.2", config_path="conf", config_name="config")
+def run_strategy(cfg: DictConfig):
+    print(OmegaConf.to_yaml(cfg, resolve=True))
+    log.info("Info level message")
+    log.debug("Debug level message")
+    # sweep_id = wandb.sweep()
 
 
 if __name__ == "__main__":
@@ -110,7 +131,6 @@ if __name__ == "__main__":
         .run_strategy()
     """
 
-
 """
 config_info = {"name": dict(
     id="Bertan",
@@ -120,6 +140,3 @@ config_info = {"name": dict(
 
 print(config_info)
 """
-
-
-
