@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import click
@@ -11,15 +13,21 @@ from omegaconf import DictConfig, OmegaConf
 import hydra
 
 from pandas import DataFrame, Series
+
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.linear_model import LinearRegression, Lasso, Ridge
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
 from car_price.missing_data_strategy import MissingDataStrategy, \
-    AssigningNullDataStrategy, DropMissingDataStrategy, \
-    DataImputationSrategy, ExtensionDataImputationStrategy
+    ImputeWithZeroDataStrategy, DropMissingDataStrategy, \
+    DataImputationStrategy, ExtensionDataImputationStrategy
 
 from car_price.categorical_data_strategy import CategoricalDataStrategy, \
     DropCategoricalStrategy,  OrdinalEncodingStrategy, OneHotEncodingStrategy
+
+from models.lasso import LassoModel
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -99,9 +107,34 @@ class CarPricePredictor:
     def run_strategy(self) -> None:
         data_frame: DataFrame = self.car_data.reading().feature_preprocessing()
         df_without_missing: DataFrame = self.missing_d_strategy.process_missing_data_strategy(data_frame)
+        df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
+        X = df_vectorized_without_missing.drop(['msrp'], axis=1)
+        y = df_vectorized_without_missing['msrp']
 
-        # df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
-        # print(df_vectorized_without_missing)
+        lasso_model = LassoModel(X=X, y=y)
+        lasso_model.plot_coefficients()
+
+        # names = df_vectorized_without_missing.drop(['msrp'], axis=1).columns
+        # lasso = Lasso(alpha=0.1)
+        # lasso_coef = lasso.fit(X, y).coef_
+        # print(lasso_coef)
+        # _ = plt.plot(range(len(names)), lasso_coef)
+        # _ = plt.xticks(range(len(names)), names, rotation=60)
+        # _ = plt.ylabel('Coefficients')
+        # plt.show()
+
+        """
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+        lasso = Lasso(alpha=0.1)
+        lasso.fit(X_train, y_train)
+        lasso_pred = lasso.predict(X_test)
+        print(lasso.score(X_test, y_test))
+        """
+
+        # reg = LinearRegression()
+        # cv_scores = cross_val_score(reg, X, y, cv=10)
+        # print("Average 5-Fold CV Score: {}".format(np.mean(cv_scores)))
+
 
 """
 @click.command()
