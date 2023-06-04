@@ -94,13 +94,14 @@ class CarPricePredictor:
                  categorical_data_strategy: CategoricalDataStrategy):
         self.car_data = car_data
         self.cat_d_strategy = categorical_data_strategy
-        self.miss_d_strategy = missing_data_strategy
+        self.missing_d_strategy = missing_data_strategy
 
     def run_strategy(self) -> None:
         data_frame: DataFrame = self.car_data.reading().feature_preprocessing()
-        df_without_missing: DataFrame = self.miss_d_strategy.process_missing_data_strategy(data_frame)
-        df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
-        print(df_vectorized_without_missing)
+        df_without_missing: DataFrame = self.missing_d_strategy.process_missing_data_strategy(data_frame)
+
+        # df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
+        # print(df_vectorized_without_missing)
 
 """
 @click.command()
@@ -128,7 +129,7 @@ def main(cfg: DictConfig):
 
     CarPricePredictor(car_data,
                       missing_data_strategy=missing_data_strategy,
-                      categorical_data_strategy=DropCategoricalStrategy())\
+                      categorical_data_strategy=categorical_data_strategy) \
         .run_strategy()
     """
     sweep_id = wandb.sweep(sweep=OmegaConf.to_object(cfg=cfg.sweep_config),
