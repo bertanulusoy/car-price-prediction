@@ -1,33 +1,24 @@
 from dataclasses import dataclass
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import click
 from hydra.utils import instantiate
 
-import wandb
-
 import logging
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 import hydra
 
 from pandas import DataFrame, Series
 
-from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn.linear_model import LinearRegression, Lasso, Ridge
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
+
 from sklearn.metrics import mean_squared_error
 
-from car_price.missing_data_strategy import MissingDataStrategy, \
-    ImputeWithZeroDataStrategy, DropMissingDataStrategy, \
-    DataImputationStrategy, ExtensionDataImputationStrategy
+from src.strategies.missing_data_strategy import MissingDataStrategy
+from src.strategies.categorical_data_strategy import CategoricalDataStrategy
 
-from car_price.categorical_data_strategy import CategoricalDataStrategy, \
-    DropCategoricalStrategy,  OrdinalEncodingStrategy, OneHotEncodingStrategy
-
-from models.lasso import LassoModel
+from src.models.regression.linear_model_selection import LinearModelSelection
+from src.models.regression.ensemble_model_selection import EnsembleModelSelection
+from src.metrics.metric_selection import MetricSelection
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -108,11 +99,29 @@ class CarPricePredictor:
         data_frame: DataFrame = self.car_data.reading().feature_preprocessing()
         df_without_missing: DataFrame = self.missing_d_strategy.process_missing_data_strategy(data_frame)
         df_vectorized_without_missing = self.cat_d_strategy.process_categorical_data_strategy(df_without_missing)
-        X = df_vectorized_without_missing.drop(['msrp'], axis=1)
-        y = df_vectorized_without_missing['msrp']
 
-        lasso_model = LassoModel(X=X, y=y)
-        lasso_model.plot_coefficients()
+        model_selection = LinearModelSelection(data_frame=df_vectorized_without_missing, target="msrp", test_size=0.3)
+        ensemble_model_selection = EnsembleModelSelection(data_frame=df_vectorized_without_missing, target="msrp", test_size=0.3)
+        # Linear Regression
+        log.info("Linear Regression")
+        X_test, y_test, model = model_selection.linear_model().fit_model()
+        print(MetricSelection(X_test=X_test, y_test=y_test, model=model)
+              .predict()
+              .root_mean_squared_error())
+        # Lasso Regression
+        log.info("Lasso Regression")
+        X_test, y_test, model = model_selection.lasso_regularized_model().fit_model()
+        print(MetricSelection(X_test=X_test, y_test=y_test, model=model)
+              .predict()
+              .root_mean_squared_error())
+        # Ridge Regression
+        log.info("Ridge Regression")
+        X_test, y_test, model = model_selection.regularized_ridge_model().fit_model()
+        print(MetricSelection(X_test=X_test, y_test=y_test, model=model)
+              .predict()
+              .root_mean_squared_error())
+        # xgboost regressor
+        ensemble_model_selection.xgboost_regressor()
 
         # names = df_vectorized_without_missing.drop(['msrp'], axis=1).columns
         # lasso = Lasso(alpha=0.1)

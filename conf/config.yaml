@@ -2,10 +2,10 @@ defaults:
   - experiment: base
 
 missing_data_strategy:
-  _target_: ml.strategies.missing_data_strategy.DropMissingDataStrategy
+  _target_: src.strategies.missing_data_strategy.DropMissingDataStrategy
 
 categorical_data_strategy:
-    _target_: ml.strategies.categorical_data_strategy.DropCategoricalStrategy
+    _target_: src.strategies.categorical_data_strategy.DropCategoricalStrategy
 
 wandb:
   project: car_price_prediction
